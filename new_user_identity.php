@@ -8,6 +8,7 @@
  *
  * @version @package_version@
  * @author Kris Steinhoff
+ * @author Manuel Delgado <manuel.delgado@ucr.ac.cr>
  *
  * Example configuration:
  *
@@ -35,8 +36,9 @@ class new_user_identity extends rcube_plugin
     {
         $rcmail = rcmail::get_instance();
 
-        if ($this->init_ldap($args['host'])) {
-            $results = $this->ldap->search('*', $args['user'], true);
+        if ($this->init_ldap($args['host'],$args['user'])) {
+            $user_txt = substr($args['user'], 0, stripos($args['user'], '@'));
+            $results = $this->ldap->search('*', $args['user'], 1, true);
             if (count($results->records) == 1) {
                 $user_name  = is_array($results->records[0]['name']) ? $results->records[0]['name'][0] : $results->records[0]['name'];
                 $user_email = is_array($results->records[0]['email']) ? $results->records[0]['email'][0] : $results->records[0]['email'];
@@ -50,7 +52,7 @@ class new_user_identity extends rcube_plugin
         return $args;
     }
 
-    private function init_ldap($host)
+    private function init_ldap($host, $user)
     {
         if ($this->ldap) {
             return $this->ldap->ready;
@@ -70,7 +72,7 @@ class new_user_identity extends rcube_plugin
             $ldap_config[$addressbook],
             $rcmail->config->get('ldap_debug'),
             $rcmail->config->mail_domain($host),
-            $match);
+            $match, $user);
 
         return $this->ldap->ready;
     }
@@ -78,8 +80,18 @@ class new_user_identity extends rcube_plugin
 
 class new_user_identity_ldap_backend extends rcube_ldap
 {
-    function __construct($p, $debug, $mail_domain, $search)
+    function __construct($p, $debug, $mail_domain, $search, $user)
     {
+        if ($p['user_specific']) {
+            if (empty($p['bind_pass'])) {
+                $p['bind_pass'] = $_POST['_pass'];
+            }
+            $fu = $user;
+            list($u, $d) = explode('@', $fu);
+
+            $replaces = array( '%fu' => $fu, '%u' => $u);
+            $p['bind_dn'] = strtr($p['bind_dn'], $replaces);
+        }
         parent::__construct($p, $debug, $mail_domain);
         $this->prop['search_fields'] = (array)$search;
     }
