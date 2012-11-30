@@ -37,7 +37,6 @@ class new_user_identity extends rcube_plugin
         $rcmail = rcmail::get_instance();
 
         if ($this->init_ldap($args['host'],$args['user'])) {
-            $user_txt = substr($args['user'], 0, stripos($args['user'], '@'));
             $results = $this->ldap->search('*', $args['user'], 1, true);
             if (count($results->records) == 1) {
                 $user_name  = is_array($results->records[0]['name']) ? $results->records[0]['name'][0] : $results->records[0]['name'];
